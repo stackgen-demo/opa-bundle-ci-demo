@@ -1,0 +1,13 @@
+{
+  "purpose": "Temporary CI demo; binary built locally, including uncommitted bundle-support changes",
+  "sourceRepository": "https://github.com/appcd-dev/stackgen-policy-360",
+  "sourceCommit": "836e2c40d545ce91d0f50121651c274dbf60f058",
+  "sourceWorkingTreeDirty": true,
+  "sourceWorkingTreeSHA256": "752a8ca3b2faa9eda65c289597118218b976899a1e12543ec81d1ea46dab7b7a",
+  "version": "demo-836e2c4-dirty",
+  "platform": "linux/amd64",
+  "binary": "stackgen360guard-linux-amd64",
+  "binarySHA256": "34272b50793eb41f1325ecc0eb912fda9939002513846e4050211bff5fecae4c",
+  "binaryBytes": 77504696,
+  "packagedAt": "2026-11-02T04:13:58.405604+00:00"
+}

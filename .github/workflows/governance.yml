@@ -1,0 +1,43 @@
+name: Terraform governance
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      terraform_path:
+        description: Terraform fixture to scan
+        type: choice
+        default: terraform
+        options:
+          - terraform
+          - fixtures/mixed
+          - fixtures/permissive
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    name: Terraform / governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Scan Terraform against workspace governance
+        env:
+          STACKGEN_API_URL: ${{ vars.STACKGEN_API_URL }}
+          STACKGEN_WORKSPACE_ID: ${{ vars.STACKGEN_WORKSPACE_ID }}
+          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN }}
+          TF_PATH: ${{ inputs.terraform_path || 'terraform' }}
+        run: python3 scripts/scan.py
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-results-${{ github.run_number }}
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
