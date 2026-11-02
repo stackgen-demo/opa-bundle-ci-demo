@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[2]
-ACTION = ROOT / 'helm/action'
+ACTION = Path(__file__).resolve().parents[1]
+ROOT = ACTION.parents[2]
 
 
 def load(name):
