@@ -20,11 +20,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Scan Terraform against workspace governance
-        env:
-          STACKGEN_API_URL: ${{ vars.STACKGEN_API_URL }}
-          STACKGEN_WORKSPACE_ID: ${{ vars.STACKGEN_WORKSPACE_ID }}
-          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN }}
-        run: python3 scripts/scan.py
+        uses: ./
+        with:
+          api-url: ${{ vars.STACKGEN_API_URL }}
+          workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}
+          token: ${{ secrets.STACKGEN_TOKEN }}
       - name: Upload scan results
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,0 +1,46 @@
+name: StackGen governance scan
+description: Scan Terraform against a workspace OPA governance bundle using the included Linux CLI
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  api-url:
+    description: StackGen API base URL
+    required: true
+  workspace-id:
+    description: Workspace UUID whose governance policies should be enforced
+    required: true
+  token:
+    description: StackGen API token supplied through a GitHub Actions secret
+    required: true
+  terraform-path:
+    description: Terraform directory relative to the caller checkout
+    default: terraform
+  output-file:
+    description: JSON report path relative to the caller checkout
+    default: reports/scan-results.json
+
+outputs:
+  report-path:
+    description: Absolute path of the generated scan report
+    value: ${{ steps.scan.outputs.report-path }}
+  bundle-revision:
+    description: Governance bundle revision used by the scan
+    value: ${{ steps.scan.outputs.bundle-revision }}
+  violations:
+    description: Number of policy violations
+    value: ${{ steps.scan.outputs.violations }}
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        STACKGEN_API_URL: ${{ inputs.api-url }}
+        STACKGEN_WORKSPACE_ID: ${{ inputs.workspace-id }}
+        STACKGEN_TOKEN: ${{ inputs.token }}
+        TERRAFORM_PATH: ${{ inputs.terraform-path }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/scan.sh"
