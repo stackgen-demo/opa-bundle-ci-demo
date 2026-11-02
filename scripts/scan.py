@@ -34,9 +34,7 @@ def main():
         raise ValueError("STACKGEN_API_URL must be an HTTPS base URL without credentials or query parameters")
     workspace = required("STACKGEN_WORKSPACE_ID")
     token = required("STACKGEN_TOKEN")
-    source = (ROOT / os.environ.get("TF_PATH", "terraform")).resolve()
-    if not source.is_relative_to(ROOT) or not source.is_dir():
-        raise ValueError("TF_PATH must identify a Terraform directory inside this repository")
+    source = ROOT / "terraform"
 
     candidates = [ROOT / "bin/stackgen360guard-linux-amd64", ROOT / "bin/stackgen360guard-linux-amd64.gz"]
     artifacts = [path for path in candidates if path.is_file()]
@@ -90,6 +88,11 @@ def main():
             raise ValueError(f"Scanner produced no report (exit {result.returncode}); inspect download or evaluation errors above")
         report = json.loads(result_file.read_text())
         print(json.dumps(report, indent=2), flush=True)
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            for finding in report.get("violations", []):
+                message = f"{finding['rule_id']}: {finding['message']} ({finding['attribute']})"
+                message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                print(f"::error file=terraform/main.tf,title=Governance policy failed::{message}", flush=True)
         if not report.get("summary", {}).get("policies_evaluated"):
             raise ValueError("No governance policies were evaluated; refusing an unenforced green check")
         if not report.get("summary", {}).get("resources_scanned"):
