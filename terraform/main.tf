@@ -1,4 +1,4 @@
-# Scan-only demo. Do not apply. Expected: no governance violations.
+# Intentional negative demo: unencrypted RDS storage. Do not apply or merge.
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -56,7 +56,7 @@ resource "aws_db_instance" "app" {
   allocated_storage           = 20
   username                    = "dbadmin"
   manage_master_user_password = true
-  storage_encrypted           = true
+  storage_encrypted           = false
   publicly_accessible         = false
   backup_retention_period     = 7
   deletion_protection         = true
