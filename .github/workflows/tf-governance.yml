@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Test shared governance reporting
+        run: python3 -m unittest discover -s .github/actions/governance-common/tests -v
       - name: Scan Terraform against workspace governance
         uses: ./.github/actions/tf-governance
         with:
