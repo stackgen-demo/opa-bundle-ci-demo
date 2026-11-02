@@ -3,8 +3,12 @@ name: Terraform governance
 on:
   push:
     branches: [main]
+    paths:
+      - terraform/**
   pull_request:
     branches: [main]
+    paths:
+      - terraform/**
   workflow_dispatch:
 
 permissions:
