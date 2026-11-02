@@ -5,7 +5,7 @@ image:
   pullPolicy: IfNotPresent
 hostNetwork: false
 securityContext:
-  privileged: false
+  privileged: true
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
 resources:
