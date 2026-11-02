@@ -58,4 +58,5 @@ runs:
         OUTPUT_FILE: ${{ inputs.output-file }}
         SCAN_OUTCOME: ${{ steps.scan.outcome }}
         PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        STACKGEN_APP_URL: ${{ format('{0}/app', inputs.api-url) }}
       run: bash "$GITHUB_ACTION_PATH/comment.sh"
