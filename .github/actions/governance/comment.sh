@@ -44,16 +44,16 @@ fi
        elif $outcome == "success" and .summary.passed then "PASS"
        else "ERROR" end) as $status |
       (if $status == "PASS" then
-        "## Looking good! Your governance checks passed", "",
-        "This change meets the governance policies applied to your workspace. Nice work!"
+         "## StackGen Governance: Looking good!", "",
+         "Your changes passed all evaluated governance policies for this workspace. Nice work!"
        elif $status == "FAIL" then
-        "## Let\u0027s get this change ready to ship", "",
-        "Some governance checks need attention. Review the findings below, make the updates, and push a new commit to check again."
+         "## StackGen Governance: Let\u0027s get this ready to ship", "",
+         "Review the findings below, make the updates, and push a new commit to check again."
        elif $status == "INCOMPLETE" then
-        "## A little more information, then we can finish", "",
+         "## StackGen Governance: A little more information, then we can finish", "",
         "Some configuration values are unresolved, so we can\u0027t confirm compliance yet. Rerun with resolved values to complete the check."
        else
-        "## We couldn\u0027t complete this check just yet", "",
+         "## StackGen Governance: We couldn\u0027t complete this check just yet", "",
         "This run did not finish successfully, so it isn\u0027t a passing governance check. Check the CI logs, then try again."
        end), "",
       "| Policies | Resources | Violations | Unknown resources |",
@@ -69,7 +69,7 @@ fi
        else empty end)
     ' "$report_path"
   else
-    printf "## We couldn't complete this check just yet\n\n"
+    printf "## StackGen Governance: We couldn't complete this check just yet\n\n"
     printf "Your change hasn't been validated yet. Check the CI logs for authentication, bundle download, or evaluation errors, then try again.\n"
   fi
   printf '\n[View CI logs and full report](%s)' "$run_url"
