@@ -22,40 +22,67 @@ trap 'rm -f -- "$temp_dir/body" "$temp_dir/payload.json" "$temp_dir/comments.jso
 report_path="$(realpath -m -- "$GITHUB_WORKSPACE/${OUTPUT_FILE:-reports/scan-results.json}")"
 [[ "$report_path" == "$(realpath -- "$GITHUB_WORKSPACE")/"* ]] || { printf 'Report path escapes checkout.\n' >&2; exit 3; }
 run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+commit_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$PR_HEAD_SHA"
+stackgen_url="${STACKGEN_APP_URL:-}"
+if [[ -n "$stackgen_url" && ( "$stackgen_url" != https://* || "$stackgen_url" == *'<'* || "$stackgen_url" == *'>'* || "$stackgen_url" == *$'\r'* || "$stackgen_url" == *$'\n'* ) ]]; then
+  printf 'Skipping invalid StackGen browser link.\n' >&2
+  stackgen_url=""
+fi
+valid_report=false
+if [[ -s "$report_path" ]] && jq -e '.summary and .bundle and (.violations | type == "array")' "$report_path" >/dev/null 2>&1; then
+  valid_report=true
+fi
 
 {
   printf '<!-- stackgen-governance-scan -->\n'
-  if [[ -s "$report_path" ]] && jq -e '.summary and .bundle and (.violations | type == "array")' "$report_path" >/dev/null; then
-    jq -r --arg outcome "${SCAN_OUTCOME:-failure}" --arg commit "$PR_HEAD_SHA" --arg run "$run_url" '
+  if [[ "$valid_report" == true ]]; then
+    jq -r --arg outcome "${SCAN_OUTCOME:-failure}" '
       def cell: tostring | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;") |
         gsub("\\|"; "&#124;") | gsub("`"; "&#96;") | gsub("[\r\n]"; " ") | gsub("@"; "&#64;");
       (if .summary.violations > 0 then "FAIL"
        elif (.summary.resources_with_unknown_attributes // 0) > 0 then "INCOMPLETE"
        elif $outcome == "success" and .summary.passed then "PASS"
        else "ERROR" end) as $status |
-      "## StackGen governance: \($status)", "",
-      "Commit: `\($commit)`", "",
+      (if $status == "PASS" then
+        "## Looking good! Your governance checks passed", "",
+        "This change meets the governance policies applied to your workspace. Nice work!"
+       elif $status == "FAIL" then
+        "## Let\u0027s get this change ready to ship", "",
+        "Some governance checks need attention. Review the findings below, make the updates, and push a new commit to check again."
+       elif $status == "INCOMPLETE" then
+        "## A little more information, then we can finish", "",
+        "Some configuration values are unresolved, so we can\u0027t confirm compliance yet. Rerun with resolved values to complete the check."
+       else
+        "## We couldn\u0027t complete this check just yet", "",
+        "This run did not finish successfully, so it isn\u0027t a passing governance check. Check the CI logs, then try again."
+       end), "",
       "| Policies | Resources | Violations | Unknown resources |",
       "| ---: | ---: | ---: | ---: |",
       "| \(.summary.policies_evaluated) | \(.summary.resources_scanned) | \(.summary.violations) | \(.summary.resources_with_unknown_attributes // 0) |", "",
-      "Bundle revision: `\(.bundle.revision | cell)`", "",
       (if (.violations | length) > 0 then
         "### Findings", "",
         "| Severity | Rule | Resource | Attribute | Message |",
         "| --- | --- | --- | --- | --- |",
         (.violations[:30][] | "| \(.severity | ascii_upcase | cell) | `\(.rule_id | cell)` | `\(.address | cell)` | `\(.attribute | cell)` | \(.message | cell | .[:300]) |"),
         (if (.violations | length) > 30 then "", "Showing the first 30 findings; the full JSON report is attached to the CI run." else empty end)
-       else "No definite policy violations reported." end), "",
-      (if $status == "INCOMPLETE" then "Unresolved configuration values prevent a compliant result.", "" else empty end),
-      (if $status == "ERROR" then "The scan did not complete successfully; do not treat this as a passing result.", "" else empty end),
-      "[View CI logs and download the full scan report](\($run))"
+       elif $status == "PASS" then "No policy violations found in the evaluated resources."
+       else empty end)
     ' "$report_path"
   else
-    printf '## StackGen governance: ERROR\n\n'
-    printf 'Commit: `%s`\n\n' "$PR_HEAD_SHA"
-    printf 'The scan did not produce a valid report. Check authentication, bundle download, or evaluation errors. This is not a compliant result.\n\n'
-    printf '[View CI logs](%s)\n' "$run_url"
+    printf "## We couldn't complete this check just yet\n\n"
+    printf "Your change hasn't been validated yet. Check the CI logs for authentication, bundle download, or evaluation errors, then try again.\n"
   fi
+  printf '\n[View CI logs and full report](%s)' "$run_url"
+  if [[ -n "$stackgen_url" ]]; then
+    printf ' | [Open StackGen](<%s>)' "$stackgen_url"
+  fi
+  printf '\n\n<details>\n<summary>Scan details</summary>\n\n'
+  printf 'Commit: [%s](%s)\n\n' "${PR_HEAD_SHA:0:7}" "$commit_url"
+  if [[ "$valid_report" == true ]]; then
+    jq -r '(.bundle.revision // "unavailable" | tostring | gsub("`"; "&#96;") | gsub("[\r\n]"; " ")) as $revision |
+      "Bundle revision: `\($revision)`"' "$report_path"
+  fi
+  printf '\n</details>\n'
 } > "$temp_dir/body"
 
 gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$pr_number/comments?per_page=100" > "$temp_dir/comments.json"
