@@ -1,4 +1,4 @@
-# Intentional negative demo: unencrypted RDS storage. Do not apply or merge.
+# Intentional negative demo: four RDS governance failures. Do not apply or merge.
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -57,9 +57,9 @@ resource "aws_db_instance" "app" {
   username                    = "dbadmin"
   manage_master_user_password = true
   storage_encrypted           = false
-  publicly_accessible         = false
-  backup_retention_period     = 7
-  deletion_protection         = true
+  publicly_accessible         = true
+  backup_retention_period     = 0
+  deletion_protection         = false
   multi_az                    = true
   auto_minor_version_upgrade  = true
   skip_final_snapshot         = false
