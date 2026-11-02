@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 
 concurrency:
   group: governance-${{ github.event.pull_request.number || github.ref }}
@@ -30,11 +31,21 @@ jobs:
           api-url: ${{ vars.STACKGEN_API_URL }}
           workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}
           token: ${{ secrets.STACKGEN_TOKEN }}
+      - name: Publish governance findings to code scanning
+        if: ${{ always() && hashFiles('reports/scan-results.sarif') != '' }}
+        # Keep the governance gate working when Code Security is unavailable.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/scan-results.sarif
+          category: stackgen-governance
       - name: Upload scan results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: governance-results-${{ github.run_number }}
-          path: reports/*.json
+          path: |
+            reports/*.json
+            reports/*.sarif
           if-no-files-found: warn
           retention-days: 7

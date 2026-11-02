@@ -7,7 +7,7 @@ die() {
   exit 3
 }
 
-for dependency in docker jq realpath timeout; do
+for dependency in docker jq python3 realpath timeout; do
   command -v "$dependency" >/dev/null || die "Missing dependency: $dependency"
 done
 : "${STACKGEN_API_URL:?Missing STACKGEN_API_URL}"
@@ -15,6 +15,7 @@ done
 : "${STACKGEN_TOKEN:?Missing STACKGEN_TOKEN}"
 
 workspace_root="$(realpath -- "${GITHUB_WORKSPACE:-$PWD}")"
+action_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source_path="$(realpath -- "$workspace_root/${TERRAFORM_PATH:-terraform}")"
 report_path="$(realpath -m -- "$workspace_root/${OUTPUT_FILE:-reports/scan-results.json}")"
 [[ "$source_path" == "$workspace_root" || "$source_path" == "$workspace_root/"* ]] || die "Terraform path escapes the checkout"
@@ -65,6 +66,8 @@ timeout --kill-after=10s 180s docker run --rm --name "$container_name" \
 [[ -s "$report_path" ]] || die "Scanner produced no report (exit $scan_exit); inspect download/evaluation errors above"
 jq . "$report_path"
 jq -e '.summary.policies_evaluated > 0 and .summary.resources_scanned > 0' "$report_path" >/dev/null || die "No policies or resources were evaluated"
+sarif_path="$(dirname -- "$report_path")/$(basename -- "$report_path" .json).sarif"
+python3 "$action_dir/sarif.py" "$report_path" "$sarif_path" "$workspace_root" "$source_path"
 
 if [[ "${GITHUB_ACTIONS:-false}" == true ]]; then
   jq -r '
@@ -77,6 +80,7 @@ fi
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {
     printf 'report-path=%s\n' "$report_path"
+    printf 'sarif-path=%s\n' "$sarif_path"
     printf 'bundle-revision=%s\n' "$(jq -r '.bundle.revision' "$report_path")"
     printf 'violations=%s\n' "$(jq -r '.summary.violations' "$report_path")"
   } >> "$GITHUB_OUTPUT"

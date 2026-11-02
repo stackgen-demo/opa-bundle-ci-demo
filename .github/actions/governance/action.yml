@@ -31,6 +31,9 @@ outputs:
   report-path:
     description: Absolute path of the generated scan report
     value: ${{ steps.scan.outputs.report-path }}
+  sarif-path:
+    description: Absolute path of the generated SARIF report
+    value: ${{ steps.scan.outputs.sarif-path }}
   bundle-revision:
     description: Governance bundle revision used by the scan
     value: ${{ steps.scan.outputs.bundle-revision }}
