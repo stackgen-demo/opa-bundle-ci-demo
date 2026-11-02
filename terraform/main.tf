@@ -19,6 +19,7 @@ resource "aws_s3_bucket" "data" {
     Name        = "governance-fixture"
     Environment = "test"
     Owner       = "platform"
+    CostCenter  = "engineering"
   }
 }
 
