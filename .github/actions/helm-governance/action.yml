@@ -1,0 +1,62 @@
+name: StackGen Helm governance
+description: Render Helm charts and gate their Kubernetes manifests against a workspace OPA bundle
+inputs:
+  api-url:
+    description: StackGen API base URL
+    required: true
+  workspace-id:
+    description: Workspace whose governance selects the Kubernetes policies
+    required: true
+  token:
+    description: StackGen PAT from a GitHub Actions secret
+    required: true
+  helm-path:
+    description: Directory containing immediate child Helm charts
+    default: helm
+  output-file:
+    description: JSON scan report relative to the checkout
+    default: helm/reports/scan-results.json
+  required-resource-types:
+    description: Comma-separated Kubernetes resource types that must have policies in the bundle
+    default: k8s/apps/v1/Deployment
+  comment-on-pr:
+    description: Create or update a Helm-specific PR summary
+    default: "true"
+  github-token:
+    description: GitHub token for PR comments
+    default: ${{ github.token }}
+outputs:
+  report-path:
+    description: Absolute JSON report path
+    value: ${{ steps.scan.outputs.report-path }}
+  sarif-path:
+    description: Absolute SARIF report path
+    value: ${{ steps.scan.outputs.sarif-path }}
+  bundle-revision:
+    description: Immutable governance revision used for this scan
+    value: ${{ steps.scan.outputs.bundle-revision }}
+runs:
+  using: composite
+  steps:
+    - uses: azure/setup-helm@v4.3.1
+      with:
+        version: v3.17.3
+    - id: scan
+      shell: bash
+      env:
+        STACKGEN_API_URL: ${{ inputs.api-url }}
+        STACKGEN_WORKSPACE_ID: ${{ inputs.workspace-id }}
+        STACKGEN_TOKEN: ${{ inputs.token }}
+        HELM_PATH: ${{ inputs.helm-path }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+        REQUIRED_RESOURCE_TYPES: ${{ inputs.required-resource-types }}
+      run: bash "$GITHUB_ACTION_PATH/scan.sh"
+    - name: Comment Helm governance results
+      if: ${{ always() && github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+        SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: python3 "$GITHUB_ACTION_PATH/report.py" comment
