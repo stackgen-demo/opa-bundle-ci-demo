@@ -1,4 +1,4 @@
-# Scan-only demo. Do not apply. Expected: no governance violations.
+# Intentional negative demo: disabled S3 public-access protection. Do not apply or merge.
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -24,10 +24,10 @@ resource "aws_s3_bucket" "data" {
 
 resource "aws_s3_bucket_public_access_block" "data" {
   bucket                  = "stackgen-governance-scan-only"
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
 resource "aws_security_group" "app" {
