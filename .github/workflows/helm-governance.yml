@@ -33,7 +33,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Test bundle guards and reporting
-        run: python3 -m unittest discover -s .github/actions/helm-governance/tests -v
+        run: |
+          python3 -m unittest discover -s .github/actions/governance-common/tests -v
+          python3 -m unittest discover -s .github/actions/helm-governance/tests -v
       - name: Render and scan Helm charts
         uses: ./.github/actions/helm-governance
         with:
