@@ -5,14 +5,10 @@ on:
     branches: [main]
     paths:
       - helm/**
-      - .github/actions/helm-governance/**
-      - .github/workflows/helm-governance.yml
   pull_request:
     branches: [main]
     paths:
       - helm/**
-      - .github/actions/helm-governance/**
-      - .github/workflows/helm-governance.yml
   workflow_dispatch:
 
 permissions:
@@ -37,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Test bundle guards and reporting
-        run: python3 -m unittest discover -s helm/tests -v
+        run: python3 -m unittest discover -s .github/actions/helm-governance/tests -v
       - name: Render and scan Helm charts
         uses: ./.github/actions/helm-governance
         with:

@@ -50,7 +50,7 @@ runs:
         HELM_PATH: ${{ inputs.helm-path }}
         OUTPUT_FILE: ${{ inputs.output-file }}
         REQUIRED_RESOURCE_TYPES: ${{ inputs.required-resource-types }}
-      run: bash "$GITHUB_WORKSPACE/helm/action/scan.sh"
+      run: bash "$GITHUB_ACTION_PATH/scan.sh"
     - name: Comment Helm governance results
       if: ${{ always() && github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' }}
       shell: bash
@@ -59,4 +59,4 @@ runs:
         OUTPUT_FILE: ${{ inputs.output-file }}
         SCAN_OUTCOME: ${{ steps.scan.outcome }}
         PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      run: python3 "$GITHUB_WORKSPACE/helm/action/report.py" comment
+      run: python3 "$GITHUB_ACTION_PATH/report.py" comment
