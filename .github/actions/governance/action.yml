@@ -20,6 +20,12 @@ inputs:
   output-file:
     description: JSON report path relative to the caller checkout
     default: reports/scan-results.json
+  comment-on-pr:
+    description: Create or update a governance result comment on the pull request
+    default: "true"
+  github-token:
+    description: GitHub token with pull-requests write permission for result comments
+    default: ${{ github.token }}
 
 outputs:
   report-path:
@@ -44,3 +50,12 @@ runs:
         TERRAFORM_PATH: ${{ inputs.terraform-path }}
         OUTPUT_FILE: ${{ inputs.output-file }}
       run: bash "$GITHUB_ACTION_PATH/scan.sh"
+    - name: Comment scan results on the pull request
+      if: ${{ always() && github.event_name == 'pull_request' && inputs.comment-on-pr == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+        SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: bash "$GITHUB_ACTION_PATH/comment.sh"
