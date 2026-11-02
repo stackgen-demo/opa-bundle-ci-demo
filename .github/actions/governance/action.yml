@@ -1,5 +1,5 @@
 name: StackGen governance scan
-description: Scan Terraform against a workspace OPA governance bundle using the included Linux CLI
+description: Scan Terraform against a workspace OPA governance bundle using the published stackgen360guard Docker image
 branding:
   icon: shield
   color: blue
