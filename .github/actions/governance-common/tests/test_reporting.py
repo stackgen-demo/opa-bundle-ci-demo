@@ -115,6 +115,20 @@ class CommentTests(unittest.TestCase):
             self.assertEqual(comment.safe_app_url(url), '')
         self.assertEqual(comment.safe_app_url('https://example.com/app'), 'https://example.com/app')
 
+    def test_links_share_a_line_and_metadata_is_collapsed(self):
+        footer = comment.comment_footer(fixture(), head='abcdef123456', run_url='https://github.com/run',
+                                        commit_url='https://github.com/commit/abcdef123456', app_url='https://example.com/app')
+        self.assertIn('[View workflow run](https://github.com/run) | [Open StackGen](<https://example.com/app>)', footer.splitlines())
+        self.assertIn('<details>\n<summary>Scan details</summary>', footer)
+        self.assertNotIn('<details open', footer)
+        visible, collapsed = footer.split('<details>', 1)
+        self.assertNotIn('Commit:', visible)
+        self.assertNotIn('Bundle revision:', visible)
+        self.assertIn('Commit: [abcdef1]', collapsed)
+        self.assertIn('Bundle revision: `sha256:test`', collapsed)
+        self.assertTrue(collapsed.rstrip().endswith('</details>'))
+        self.assertNotIn('Bundle revision:', comment.comment_body(fixture(), 'failure', kind='helm'))
+
 
 class PublishingTests(unittest.TestCase):
     def setUp(self):
@@ -152,7 +166,7 @@ class PublishingTests(unittest.TestCase):
         args, kwargs = api.call_args
         self.assertEqual(args[0], 'repos/example/demo/issues/comments/2')
         self.assertEqual(kwargs['method'], 'PATCH')
-        self.assertIn('Commit: `current`', args[1]['body'])
+        self.assertIn('Commit: [current]', args[1]['body'])
 
     @patch.object(comment, 'api')
     def test_user_comments_are_not_modified(self, api):

@@ -12,12 +12,12 @@ import sys
 from urllib.parse import quote, unquote
 
 
-def api(endpoint, payload=None, paginate=False):
+def api(endpoint, payload=None, paginate=False, method=None):
     args = ["gh", "api", endpoint]
     if paginate:
         args += ["--paginate", "--slurp"]
     if payload is not None:
-        args += ["--method", "POST", "--input", "-"]
+        args += ["--method", method or "POST", "--input", "-"]
     result = subprocess.run(args, input=json.dumps(payload) if payload is not None else None,
                             text=True, capture_output=True)
     if result.returncode:
@@ -93,6 +93,56 @@ def finding_line(text, address, attribute, changed):
     return candidates[0]
 
 
+def finding_marker(path, items):
+    # A finding survives reruns, merges, line shifts, and policy text updates.
+    # The PR endpoint already scopes identity, so neither head SHA nor line belongs here.
+    findings = sorted({(item["ruleId"], item["properties"]["resource"], item["properties"]["attribute"])
+                       for item in items})
+    identity = json.dumps([path, findings], separators=(",", ":"))
+    return "<!-- stackgen-governance-inline:v2:" + hashlib.sha256(identity.encode()).hexdigest() + " -->"
+
+
+def finding_body(marker, items):
+    body = marker + "\n**StackGen governance finding**\n\n"
+    for item in sorted(items, key=lambda item: (item["ruleId"], item["message"]["text"])):
+        text = item["message"]["text"]
+        for old, new in [("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ("@", "&#64;"), ("`", "&#96;")]:
+            text = text.replace(old, new)
+        body += "\n".join("> " + line for line in text.splitlines()) + "\n\n"
+    return body[:60000]
+
+
+def legacy_content(body):
+    # Old markers contain an opaque hash of the SHA and line. Match their owned
+    # finding content once, independent of paragraph order, then migrate in place.
+    content = re.sub(r"^<!-- stackgen-governance-inline:[^>]*-->\s*", "", body)
+    return sorted({paragraph.strip() for paragraph in content.split("\n\n") if paragraph.strip()})
+
+
+def plan_comments(grouped, existing):
+    managed = [comment for comment in existing
+               if comment["user"]["login"] == "github-actions[bot]"
+               and not comment.get("in_reply_to_id")
+               and comment["body"].startswith("<!-- stackgen-governance-inline:")]
+    comments, updates, planned = [], [], set()
+    for (path, line), items in grouped.items():
+        marker = finding_marker(path, items)
+        if marker in planned:
+            continue
+        planned.add(marker)
+        body = finding_body(marker, items)
+        match = next((comment for comment in managed if comment["path"] == path and marker in comment["body"]), None)
+        if match is None:
+            match = next((comment for comment in managed if comment["path"] == path
+                          and legacy_content(comment["body"]) == legacy_content(body)), None)
+        if match is not None:
+            if match["body"] != body:
+                updates.append({"id": match["id"], "body": body})
+        else:
+            comments.append({"path": path, "line": line, "side": "RIGHT", "body": body})
+    return comments, updates
+
+
 def main():
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     report = (workspace / os.environ.get("OUTPUT_FILE", "reports/scan-results.json")).resolve()
@@ -135,31 +185,24 @@ def main():
                 break
 
     existing = [c for page in api(endpoint + "/comments?per_page=100", paginate=True) for c in page]
-    comments = []
-    for (path, line), items in grouped.items():
-        identity = json.dumps([head, path, line, sorted(item["ruleId"] for item in items)])
-        marker = "<!-- stackgen-governance-inline:" + hashlib.sha256(identity.encode()).hexdigest() + " -->"
-        if any(marker in c["body"] and c["user"]["type"] == "Bot" for c in existing):
-            continue
-        body = marker + "\n**StackGen governance finding**\n\n"
-        for item in items:
-            text = item["message"]["text"]
-            for old, new in [("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ("@", "&#64;"), ("`", "&#96;")]:
-                text = text.replace(old, new)
-            body += "\n".join("> " + line for line in text.splitlines()) + "\n\n"
-        comments.append({"path": path, "line": line, "side": "RIGHT", "body": body[:60000]})
-    if not comments:
+    comments, updates = plan_comments(grouped, existing)
+    if not comments and not updates:
         print("No new findings on changed lines; findings remain in the PR summary.")
         return
     payload = {"commit_id": head, "event": "COMMENT", "comments": comments[:30]}
     if "--dry-run" in sys.argv:
-        print(json.dumps(payload, indent=2))
+        print(json.dumps({**payload, "updates": updates[:30]}, indent=2))
         return
     if api(endpoint)["head"]["sha"] != head:
         print("Skipping inline comments because the PR head changed.")
         return
-    review = api(endpoint + "/reviews", payload)
-    print(f"Posted {len(payload['comments'])} inline governance comments: {review['html_url']}")
+    for update in updates[:30]:
+        api(f"repos/{repo}/pulls/comments/{update['id']}", {"body": update["body"]}, method="PATCH")
+    if updates:
+        print(f"Updated {min(len(updates), 30)} existing governance finding comments.")
+    if comments:
+        review = api(endpoint + "/reviews", payload)
+        print(f"Posted {len(payload['comments'])} inline governance comments: {review['html_url']}")
 
 
 if __name__ == "__main__":
