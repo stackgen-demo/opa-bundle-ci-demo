@@ -3,13 +3,19 @@ name: Terraform governance
 on:
   push:
     branches: [main]
+    paths:
+      - terraform/**
   pull_request:
     branches: [main]
+    paths:
+      - terraform/**
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pull-requests: write
+  security-events: write
 
 concurrency:
   group: governance-${{ github.event.pull_request.number || github.ref }}
@@ -24,17 +30,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Test shared governance reporting
+        run: python3 -m unittest discover -s .github/actions/governance-common/tests -v
       - name: Scan Terraform against workspace governance
-        uses: ./.github/actions/governance
+        uses: ./.github/actions/tf-governance
         with:
           api-url: ${{ vars.STACKGEN_API_URL }}
           workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}
           token: ${{ secrets.STACKGEN_TOKEN }}
+      - name: Publish governance findings to code scanning
+        if: ${{ always() && hashFiles('reports/scan-results.sarif') != '' }}
+        # Keep the governance gate working when Code Security is unavailable.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/scan-results.sarif
+          category: stackgen-governance
       - name: Upload scan results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: governance-results-${{ github.run_number }}
-          path: reports/*.json
+          path: |
+            reports/*.json
+            reports/*.sarif
           if-no-files-found: warn
           retention-days: 7

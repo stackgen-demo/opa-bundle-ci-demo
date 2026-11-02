@@ -1,0 +1,62 @@
+name: Helm governance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - helm/**
+  pull_request:
+    branches: [main]
+    paths:
+      - helm/**
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+  security-events: write
+
+concurrency:
+  group: helm-governance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  helm-governance:
+    name: Helm / governance
+    # Fork pull requests cannot access the StackGen PAT. Never use pull_request_target.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test bundle guards and reporting
+        run: |
+          python3 -m unittest discover -s .github/actions/governance-common/tests -v
+          python3 -m unittest discover -s .github/actions/helm-governance/tests -v
+      - name: Render and scan Helm charts
+        uses: ./.github/actions/helm-governance
+        with:
+          api-url: ${{ vars.STACKGEN_API_URL }}
+          workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}
+          token: ${{ secrets.STACKGEN_KUBERNETES_TOKEN }}
+      - name: Publish Helm findings to code scanning
+        if: ${{ always() && hashFiles('helm/reports/scan-results.sarif') != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: helm/reports/scan-results.sarif
+          category: stackgen-helm-governance
+      - name: Upload rendered Kubernetes manifests and scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-governance-results-${{ github.run_number }}
+          path: |
+            helm/reports/rendered/
+            helm/reports/*.json
+            helm/reports/*.sarif
+          if-no-files-found: warn
+          retention-days: 7
