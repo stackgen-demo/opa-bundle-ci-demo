@@ -3,8 +3,12 @@ name: Terraform governance
 on:
   push:
     branches: [main]
+    paths:
+      - terraform/**
   pull_request:
     branches: [main]
+    paths:
+      - terraform/**
   workflow_dispatch:
 
 permissions:
@@ -26,8 +30,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Test shared governance reporting
+        run: python3 -m unittest discover -s .github/actions/governance-common/tests -v
       - name: Scan Terraform against workspace governance
-        uses: ./.github/actions/governance
+        uses: ./.github/actions/tf-governance
         with:
           api-url: ${{ vars.STACKGEN_API_URL }}
           workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}

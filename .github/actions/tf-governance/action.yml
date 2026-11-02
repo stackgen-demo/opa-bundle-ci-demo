@@ -1,4 +1,4 @@
-name: StackGen governance scan
+name: StackGen Terraform governance scan
 description: Scan Terraform against a workspace OPA governance bundle using the published stackgen360guard Docker image
 branding:
   icon: shield
