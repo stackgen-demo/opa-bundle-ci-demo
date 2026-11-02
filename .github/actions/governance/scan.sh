@@ -29,8 +29,7 @@ authority="${authority%%/*}"
 [[ -n "$authority" && "$authority" != *@* ]] || die "Invalid API URL or embedded credentials"
 [[ "$STACKGEN_WORKSPACE_ID" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] || die "Workspace ID must be a UUID"
 
-# v0.1.0, pinned to its multi-architecture manifest for reproducible scans.
-scanner_image="ghcr.io/appcd-dev/stackgen-policy-360:v0.1.0@sha256:d6cb29b6895e4238375387a827e2340ebb871ccf2e0a6c89a8a739f49f9f869c"
+scanner_image="ghcr.io/stackgenhq/stackgen360guard:latest"
 env -u STACKGEN_TOKEN timeout 120s docker pull "$scanner_image" || die "Could not pull the public scanner image"
 env -u STACKGEN_TOKEN timeout 30s docker run --rm "$scanner_image" capabilities | jq -e '.supported_bundle_contracts | index("stackgen.resource-config/v1") != null' >/dev/null
 
