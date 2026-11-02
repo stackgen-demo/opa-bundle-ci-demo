@@ -1,4 +1,5 @@
 /reports/
+/helm/reports/
 __pycache__/
 .terraform/
 *.tfstate

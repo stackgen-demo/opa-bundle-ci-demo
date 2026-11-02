@@ -1,0 +1,17 @@
+replicaCount: 1
+image:
+  repository: busybox
+  tag: 1.37.0
+  pullPolicy: IfNotPresent
+hostNetwork: false
+securityContext:
+  privileged: false
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+resources:
+  requests:
+    cpu: 50m
+    memory: 16Mi
+  limits:
+    cpu: 100m
+    memory: 32Mi
