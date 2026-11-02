@@ -43,4 +43,4 @@ runs:
         STACKGEN_TOKEN: ${{ inputs.token }}
         TERRAFORM_PATH: ${{ inputs.terraform-path }}
         OUTPUT_FILE: ${{ inputs.output-file }}
-      run: bash "$GITHUB_ACTION_PATH/scripts/scan.sh"
+      run: bash "$GITHUB_ACTION_PATH/scan.sh"

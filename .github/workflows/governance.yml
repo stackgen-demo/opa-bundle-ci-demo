@@ -20,7 +20,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Scan Terraform against workspace governance
-        uses: ./
+        uses: ./.github/actions/governance
         with:
           api-url: ${{ vars.STACKGEN_API_URL }}
           workspace-id: ${{ vars.STACKGEN_WORKSPACE_ID }}

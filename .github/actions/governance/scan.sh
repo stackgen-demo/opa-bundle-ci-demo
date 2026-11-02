@@ -15,7 +15,7 @@ done
 : "${STACKGEN_WORKSPACE_ID:?Missing STACKGEN_WORKSPACE_ID}"
 : "${STACKGEN_TOKEN:?Missing STACKGEN_TOKEN}"
 
-action_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+action_repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 workspace_root="$(realpath -- "${GITHUB_WORKSPACE:-$PWD}")"
 source_path="$(realpath -- "$workspace_root/${TERRAFORM_PATH:-terraform}")"
 report_path="$(realpath -m -- "$workspace_root/${OUTPUT_FILE:-reports/scan-results.json}")"
@@ -31,8 +31,8 @@ authority="${authority%%/*}"
 [[ -n "$authority" && "$authority" != *@* ]] || die "Invalid API URL or embedded credentials"
 [[ "$STACKGEN_WORKSPACE_ID" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] || die "Workspace ID must be a UUID"
 
-(cd -- "$action_root/bin" && sha256sum --check SHA256SUMS)
-binary="$action_root/bin/stackgen360guard-linux-amd64"
+(cd -- "$action_repo_root/bin" && sha256sum --check SHA256SUMS)
+binary="$action_repo_root/bin/stackgen360guard-linux-amd64"
 [[ -x "$binary" ]] || die "Scanner binary is not executable"
 env -u STACKGEN_TOKEN "$binary" capabilities | jq -e '.supported_bundle_contracts | index("stackgen.resource-config/v1") != null' >/dev/null
 
