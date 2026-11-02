@@ -1,4 +1,4 @@
-# Scan-only demo. Do not apply. Expected: no governance violations.
+# Intentional negative demo: public SSH. Do not apply or merge.
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -32,13 +32,13 @@ resource "aws_s3_bucket_public_access_block" "data" {
 
 resource "aws_security_group" "app" {
   name        = "stackgen-governance-scan-only"
-  description = "Scan fixture: private HTTPS"
+  description = "Demo: unrestricted SSH"
   ingress {
-    description = "Private HTTPS"
-    from_port   = 443
-    to_port     = 443
+    description = "Public SSH"
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
   egress {
     description = "Private HTTPS"
