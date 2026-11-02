@@ -74,7 +74,6 @@ def comment_body(report, outcome, *, kind):
     body += ['', 'Full JSON/SARIF reports are attached to the workflow run.']
     if kind == 'helm':
         body += ['Rendered YAML is also attached. Generated YAML locations are not attributed to Helm template or values lines.']
-    body += ['', 'Bundle revision: `' + cell(report['bundle']['revision']) + '`']
     return '\n'.join(body)
 
 
@@ -108,6 +107,18 @@ def safe_app_url(value):
     return value if parsed.scheme == 'https' and parsed.netloc and not parsed.username else ''
 
 
+def comment_footer(report, *, head, run_url, commit_url, app_url=''):
+    links = f'[View workflow run]({run_url})'
+    if app_url:
+        links += f' | [Open StackGen](<{app_url}>)'
+    details = ['<details>', '<summary>Scan details</summary>', '',
+               f'Commit: [{head[:7]}]({commit_url})']
+    if report is not None:
+        details += ['', 'Bundle revision: `' + cell(report['bundle']['revision']) + '`']
+    details += ['', '</details>']
+    return '\n\n' + links + '\n\n' + '\n'.join(details)
+
+
 def publish(kind):
     profile = PROFILES[kind]
     if not os.environ.get('GH_TOKEN'):
@@ -125,10 +136,9 @@ def publish(kind):
         return
     body = comment_body(report, os.environ.get('SCAN_OUTCOME', 'failure'), kind=kind)
     run_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
-    body += f'\n\n[View workflow run]({run_url})\nCommit: `{head}`'
+    commit_url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/commit/{head}"
     app_url = safe_app_url(os.environ.get('STACKGEN_APP_URL', ''))
-    if app_url:
-        body += f'\n[Open StackGen](<{app_url}>)'
+    body += comment_footer(report, head=head, run_url=run_url, commit_url=commit_url, app_url=app_url)
     pages = api(f'repos/{repo}/issues/{number}/comments?per_page=100', paginate=True)
     existing = next((item for page in pages for item in page
                      if item['user']['login'] == 'github-actions[bot]' and item['body'].startswith(profile['marker'])), None)
