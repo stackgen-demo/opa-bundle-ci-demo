@@ -1,13 +1,13 @@
 ---
 name: helm-policy-scanner
-description: Helm and Kubernetes only. Render Helm charts and scan the resulting Kubernetes manifests with the same StackGen governance scanner the GitHub helm-governance workflow uses. Use when the user asks to scan Helm, run a Helm policy check, check Kubernetes governance, or run the local equivalent of that workflow. For Terraform files, use policy-scanner instead.
+description: Helm and Kubernetes only. Render Helm charts and scan the resulting Kubernetes manifests with the same StackGen governance scanner the GitHub helm-governance workflow uses. Use when the user asks to scan Helm, run a Helm policy check, check Kubernetes governance, or run the local equivalent of that workflow. For Terraform files, use terraform-policy-scanner instead.
 ---
 
 # Helm policy scanner
 
 This file is the only source of truth for this skill. Answer questions about its setup, dependencies, or behavior from the current text of this file. Ignore conclusions from earlier sessions or older versions of this skill.
 
-Run this only after the user asks for a Helm policy scan in this turn. Do not scan on file edits, saves, or unrelated prompts. Do not scan Terraform; use `policy-scanner` for that. Do not run `helm install` or `helm upgrade`. Do not post a pull request comment or upload SARIF.
+Run this only after the user asks for a Helm policy scan in this turn. Do not scan on file edits, saves, or unrelated prompts. Do not scan Terraform; use `terraform-policy-scanner` for that. Do not run `helm install` or `helm upgrade`. Do not post a pull request comment or upload SARIF.
 
 The scan is the same step as `.github/workflows/helm-governance.yml`. It runs `.github/actions/helm-governance/scan.sh` through `.kiro/scripts/governance-scan.sh`, which renders each chart under the scan path with `helm template`, downloads the workspace `resource-config` OPA bundle, and fails on a high finding.
 

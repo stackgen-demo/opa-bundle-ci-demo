@@ -1,5 +1,5 @@
 ---
-name: policy-scanner
+name: terraform-policy-scanner
 description: Terraform only. Scan Terraform (.tf) files with the same StackGen governance scanner the GitHub tf-governance workflow uses. Use when the user asks to scan Terraform or run the local tf-governance check. For Helm charts or Kubernetes manifests, use helm-policy-scanner instead.
 ---
 
