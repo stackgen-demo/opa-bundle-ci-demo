@@ -36,7 +36,7 @@ trap 'exit 143' TERM
 printf 'Authorization: Bearer %s' "$STACKGEN_TOKEN" > "$temp_dir/auth-header"
 unset STACKGEN_TOKEN
 
-bundle_url="$api_url/iac-gen/v1/policy-bundle?orgId=$STACKGEN_WORKSPACE_ID&target=kubernetes&format=opa-bundle"
+bundle_url="$api_url/iac-gen/v1/policy-bundle?orgId=$STACKGEN_WORKSPACE_ID&target=resource-config&format=opa-bundle"
 curl --fail --silent --show-error --connect-timeout 10 --max-time 60 --retry 2 \
   --max-filesize 16777216 --header "@$temp_dir/auth-header" --output "$temp_dir/bundle.tar.gz" -- "$bundle_url"
 rm -f -- "$temp_dir/auth-header"
